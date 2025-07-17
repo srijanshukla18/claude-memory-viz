@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Memory Knowledge Graph</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --sidebar-bg: #161b22;
+            --primary-color: #58a6ff;
+            --secondary-color: #1f6feb;
+            --border-color: #30363d;
+            --text-color: #c9d1d9;
+            --text-muted: #8b949e;
+            --font-family: 'Inter', sans-serif;
+            --success-color: #2ea043;
+            --danger-color: #f85149;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: var(--font-family);
+            background: var(--bg-color);
+            color: var(--text-color);
+            overflow: hidden;
+            display: flex;
+        }
+        
+        .container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+        }
+        
+        .sidebar {
+            width: 340px;
+            height: 100vh;
+            background: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            z-index: 1000;
+            overflow-y: auto;
+            transition: width 0.3s ease;
+        }
+
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .sidebar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        .sidebar::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 3px;
+        }
+
+        .sidebar-header {
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 20px;
+        }
+
+        .title {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text-color);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .title-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 20px;
+            color: var(--bg-color);
+        }
+        
+        .control-section {
+            background: var(--bg-color);
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 16px;
+            color: var(--text-color);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .control-group {
+            margin-bottom: 16px;
+        }
+        
+        .control-group:last-child {
+            margin-bottom: 0;
+        }
+        
+        .control-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+        
+        .control-group select,
+        .control-group input[type="text"] {
+            width: 100%;
+            padding: 10px 12px;
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-color);
+            font-size: 14px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .control-group select:focus,
+        .control-group input[type="text"]:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.2);
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            background: var(--border-color);
+            border-radius: 3px;
+            outline: none;
+            transition: background 0.2s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: var(--primary-color);
+            cursor: pointer;
+            border-radius: 50%;
+            border: 3px solid var(--sidebar-bg);
+            transition: transform 0.2s;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+        }
+        
+        .stats {
+            font-size: 14px;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        #selectedInfo {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border-color);
+            font-size: 13px;
+            line-height: 1.6;
+            color: var(--text-color);
+        }
+
+        #selectedInfo strong {
+            color: var(--primary-color);
+            font-weight: 500;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 13px;
+        }
+        
+        .legend-color {
+            width: 14px;
+            height: 14px;
+            border-radius: 4px;
+            margin-right: 10px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .instructions-list {
+            list-style: none;
+            padding-left: 0;
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.8;
+        }
+        
+        .instructions-list li {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .instructions-list strong {
+            color: var(--text-color);
+            font-weight: 500;
+            width: 110px;
+            flex-shrink: 0;
+        }
+        
+        .graph-container {
+            flex-grow: 1;
+            position: relative;
+        }
+        
+        .zoom-controls {
+            position: absolute;
+            bottom: 24px;
+            right: 24px;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .zoom-btn {
+            width: 40px;
+            height: 40px;
+            background-color: var(--sidebar-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 20px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .zoom-btn:hover {
+            background-color: var(--bg-color);
+            border-color: var(--primary-color);
+        }
+        
+        #graph {
+            width: 100%;
+            height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        
+        .tooltip {
+            position: absolute;
+            background: rgba(13, 17, 23, 0.8);
+            backdrop-filter: blur(8px);
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            max-width: 320px;
+            pointer-events: none;
+            z-index: 2000;
+            border: 1px solid var(--border-color);
+            display: none;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+        }
+        
+        .tooltip-title {
+            font-weight: 700;
+            font-size: 14px;
+            margin-bottom: 4px;
+            color: var(--primary-color);
+        }
+        
+        .tooltip-type {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+        
+        #tooltipObservations {
+            list-style-type: none;
+            padding-left: 0;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+        
+        #tooltipObservations li {
+            padding: 4px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        #tooltipObservations li:last-child {
+            border-bottom: none;
+        }
+        
+        .modal {
+            position: fixed;
+            z-index: 3000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            display: none; /* Initially hidden */
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal.visible {
+            display: flex;
+            opacity: 1;
+        }
+        
+        .modal-content {
+            background: var(--sidebar-bg);
+            padding: 0;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 700px;
+            max-height: 80vh;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            transform: scale(0.95);
+            transition: transform 0.3s ease;
+        }
+
+        .modal.visible .modal-content {
+            transform: scale(1);
+        }
+        
+        .modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border-color);
+            position: relative;
+        }
+        
+        .modal-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-color);
+            margin: 0;
+        }
+        
+        .modal-type {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 4px;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+        
+        .modal-close {
+            position: absolute;
+            right: 16px;
+            top: 16px;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            color: var(--text-muted);
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .modal-close:hover {
+            color: var(--text-color);
+            background-color: var(--border-color);
+            transform: rotate(90deg);
+        }
+        
+        .modal-body {
+            padding: 24px;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+        
+        .modal-body::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .modal-body::-webkit-scrollbar-track {
+            background: var(--bg-color);
+            border-radius: 4px;
+        }
+        
+        .modal-body::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+        
+        .modal-body::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-color);
+        }
+        
+        .modal-section {
+            margin-bottom: 24px;
+        }
+
+        .modal-section:last-child {
+            margin-bottom: 0;
+        }
+        
+        .modal-section-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-color);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .modal-observations {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .modal-observations li {
+            background: var(--bg-color);
+            padding: 10px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            font-size: 14px;
+            line-height: 1.5;
+            color: var(--text-color);
+        }
+        
+        .modal-connections {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .modal-connection {
+            background: var(--bg-color);
+            padding: 10px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            font-size: 14px;
+            color: var(--text-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+        
+        .modal-connection-type {
+            color: var(--text-muted);
+            font-size: 13px;
+            text-transform: capitalize;
+        }
+
+        .modal-connection-target {
+            font-weight: 500;
+            color: var(--primary-color);
+        }
+
+        .arrow {
+            color: var(--text-muted);
+        }
+
+        .reader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-color);
+            z-index: 4000;
+            display: none;
+            flex-direction: column;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        .reader.visible {
+            display: flex;
+            opacity: 1;
+        }
+
+        .reader-header {
+            padding: 20px 60px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .reader-title {
+            font-size: 20px;
+            font-weight: 500;
+        }
+
+        .reader-close {
+            font-size: 14px;
+            cursor: pointer;
+            color: var(--text-muted);
+            background: var(--sidebar-bg);
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            transition: all 0.2s ease;
+        }
+
+        .reader-close:hover {
+            color: var(--text-color);
+            border-color: var(--primary-color);
+        }
+
+        .reader-content {
+            padding: 40px 0;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+        
+        .reader-body {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 0 20px;
+            font-size: 16px;
+            line-height: 1.7;
+            color: var(--text-color);
+        }
+
+        .reader-body h1, .reader-body h2, .reader-body h3 {
+            margin-top: 2em;
+            margin-bottom: 1em;
+            font-weight: 700;
+            color: var(--text-color);
+        }
+        .reader-body h1 { font-size: 2em; border-bottom: 1px solid var(--border-color); padding-bottom: 0.3em; }
+        .reader-body h2 { font-size: 1.5em; border-bottom: 1px solid var(--border-color); padding-bottom: 0.3em;}
+        .reader-body h3 { font-size: 1.25em; }
+        .reader-body p { margin-bottom: 1.25em; }
+        .reader-body ul, .reader-body ol { margin-left: 2em; margin-bottom: 1.25em; }
+        .reader-body li { margin-bottom: 0.5em; }
+        .reader-body a { color: var(--primary-color); text-decoration: none; }
+        .reader-body a:hover { text-decoration: underline; }
+        .reader-body code {
+            background-color: var(--sidebar-bg);
+            padding: .2em .4em;
+            margin: 0;
+            font-size: 85%;
+            border-radius: 6px;
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+        }
+        .reader-body pre {
+            background-color: var(--sidebar-bg);
+            padding: 16px;
+            border-radius: 6px;
+            overflow-x: auto;
+        }
+        .reader-body pre code {
+            padding: 0;
+            font-size: 100%;
+            background: transparent;
+        }
+         .reader-body blockquote {
+            border-left: 0.25em solid var(--border-color);
+            padding: 0 1em;
+            color: var(--text-muted);
+            margin-left: 0;
+            margin-right: 0;
+            margin-bottom: 1.25em;
+        }
+        
+        .modal-footer {
+            padding: 16px 24px;
+            border-top: 1px solid var(--border-color);
+            background-color: var(--bg-color);
+        }
+
+        .btn-primary {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            text-align: center;
+            background-color: var(--primary-color);
+            color: var(--bg-color);
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn-primary:hover {
+            opacity: 0.85;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="title">
+                    <div class="title-icon">🧠</div>
+                    <span>Claude Memory KG</span>
+                </div>
+            </div>
+
+            <div class="control-section">
+                <div class="section-title">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.6667 2H1.33333L6.66667 8.30667V12.6667L9.33333 14V8.30667L14.6667 2Z"></path></svg>
+                    Controls
+                </div>
+                <div class="control-group">
+                    <label for="entityTypeFilter">Filter by Type</label>
+                    <select id="entityTypeFilter">
+                        <option value="">All Types</option>
+                    </select>
+                </div>
+                
+                <div class="control-group">
+                    <label for="searchInput">Search</label>
+                    <input type="text" id="searchInput" placeholder="Search entities or observations...">
+                </div>
+                
+                <div class="control-group">
+                    <label for="chargeSlider">Node Repulsion</label>
+                    <input type="range" id="chargeSlider" min="100" max="20000" value="8000" step="100">
+                </div>
+            </div>
+
+            <div class="control-section">
+                <div class="section-title">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 14.6667V1.33333H14.6667"></path><path d="M12.4667 5.33333C10.68 5.33333 9.33333 4 8.66667 2.66667"></path><path d="M8.66667 8.66667C10.0133 7.32 10.68 6.66667 12.4667 6.66667"></path></svg>
+                    Stats
+                </div>
+                 <div class="stats">
+                    <div id="nodeCount">Nodes: 0</div>
+                    <div id="edgeCount">Edges: 0</div>
+                </div>
+                <div id="selectedInfo"></div>
+            </div>
+
+            <div class="control-section">
+                <div class="section-title">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 14.6667C11.68 14.6667 14.6667 11.68 14.6667 8C14.6667 4.32 11.68 1.33333 8 1.33333C4.32 1.33333 1.33333 4.32 1.33333 8C1.33333 11.68 4.32 14.6667 8 14.6667Z"></path><path d="M8 10.6667V8"></path><path d="M8 5.33333H8.00667"></path></svg>
+                    Instructions
+                </div>
+                <ul class="instructions-list">
+                    <li><strong>Single Click</strong> <span>- Highlight node & connections</span></li>
+                    <li><strong>Double Click</strong> <span>- Open details modal</span></li>
+                    <li><strong>Click BG</strong> <span>- Clear selection</span></li>
+                    <li><strong>Drag Node</strong> <span>- Reposition node</span></li>
+                    <li><strong>Scroll</strong> <span>- Zoom in/out</span></li>
+                    <li><strong>ESC Key</strong> <span>- Close details modal</span></li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="graph-container">
+            <div id="graph"></div>
+            <div class="zoom-controls">
+                <button id="zoom-in" class="zoom-btn">+</button>
+                <button id="zoom-out" class="zoom-btn">-</button>
+            </div>
+        </div>
+        
+        <div class="tooltip" id="tooltip">
+            <div class="tooltip-title" id="tooltipTitle"></div>
+            <div class="tooltip-type" id="tooltipType"></div>
+            <ul id="tooltipObservations"></ul>
+        </div>
+        
+        <!-- Modal -->
+        <div id="nodeModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div>
+                        <h2 class="modal-title" id="modalTitle">Node Details</h2>
+                        <div class="modal-type" id="modalType">Entity Type</div>
+                    </div>
+                    <span class="modal-close" id="modalClose">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div class="modal-section">
+                        <div class="modal-section-title">📝 Observations (<span id="modalObservationCount">0</span>)</div>
+                        <ul class="modal-observations" id="modalObservations"></ul>
+                    </div>
+                    <div class="modal-section" id="modalConnectionsSection">
+                        <div class="modal-section-title">🔗 Connections (<span id="modalConnectionCount">0</span>)</div>
+                        <div class="modal-connections" id="modalConnections"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="readMoreBtn" class="btn-primary">Read Full Note</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Reader View -->
+    <div id="reader" class="reader">
+        <div class="reader-header">
+            <h2 id="readerTitle" class="reader-title"></h2>
+            <div id="readerClose" class="reader-close">Back to Graph &rarr;</div>
+        </div>
+        <div class="reader-content">
+            <div id="readerBody" class="reader-body"></div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/cytoscape@3.26.0/dist/cytoscape.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://unpkg.com/cytoscape-edge-bundling@2.3.0/dist/cytoscape-edge-bundling.min.js"></script>
+    <script src="https://unpkg.com/layout-base@2.1.0/layout-base.js"></script>
+    <script src="https://unpkg.com/cose-base@2.1.0/cose-base.js"></script>
+    <script src="https://unpkg.com/cytoscape-cose-bilkent@4.0.0/cytoscape-cose-bilkent.js"></script>
+    <script src="graph-cytoscape.js"></script>
+</body>
+</html>

@@ -6,7 +6,7 @@
 
 Transform your Claude Memory MCP data into stunning interactive visualizations. See how your AI assistant's knowledge connects and evolves over time.
 
-This is built to work with ![Knowledge Graph Memory Server]([https://github.com/modelcontextprotocol/servers/tree/main/sr...](https://github.com/modelcontextprotocol/servers/tree/main/src/memory)
+This is built to work with [Knowledge Graph Memory Server]([https://github.com/modelcontextprotocol/servers/tree/main/sr...](https://github.com/modelcontextprotocol/servers/tree/main/src/memory)
 
 ## 📸 What It Looks Like
 
